@@ -23,7 +23,6 @@ def haversine(lat1, lon1, lat2, lon2):
 def get_latest_station_snapshot():
     db = SessionLocal()
 
-    # Get latest timestamp
     latest_time = (
         db.query(Station.timestamp)
         .order_by(Station.timestamp.desc())
@@ -61,30 +60,8 @@ def get_latest_station_snapshot():
 
     return df
 
-    db = SessionLocal()
-
-    # Get only latest hour snapshot
-    result = db.query(Station).order_by(Station.timestamp.desc()).all()
-
-    db.close()
-
-    if not result:
-        return pd.DataFrame()
-
-    df = pd.DataFrame([
-        {
-            "latitude": r.latitude,
-            "longitude": r.longitude,
-            "value": r.aqi
-        }
-        for r in result
-    ])
-
-    return df
-
 
 def predict_pollution(lat: float, lon: float):
-
     df = get_latest_station_snapshot()
 
     if df.empty:
@@ -120,7 +97,6 @@ def predict_pollution(lat: float, lon: float):
 
     predicted = sum(weighted_values) / sum(weights)
 
-    # Use nearest station for other pollutants
     nearest_station = nearest.iloc[0]
 
     return {
@@ -133,31 +109,3 @@ def predict_pollution(lat: float, lon: float):
         "o3": nearest_station["o3"],
         "humidity": nearest_station["humidity"]
     }
-
-
-    df = get_latest_station_snapshot()
-
-    if df.empty:
-        return None
-
-    df["distance"] = df.apply(
-        lambda row: haversine(lat, lon, row["latitude"], row["longitude"]),
-        axis=1
-    )
-
-    nearest = df.sort_values("distance").head(3)
-
-    weights = []
-    weighted_values = []
-
-    for _, row in nearest.iterrows():
-        if row["distance"] == 0:
-            return float(row["value"])
-
-        weight = 1 / (row["distance"] ** 2)
-        weights.append(weight)
-        weighted_values.append(weight * row["value"])
-
-    predicted = sum(weighted_values) / sum(weights)
-
-    return round(float(predicted), 2)

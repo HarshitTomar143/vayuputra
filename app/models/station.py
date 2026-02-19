@@ -22,4 +22,4 @@ class Station(Base):
     o3 = Column(Float, nullable=True)
     humidity = Column(Float, nullable=True)
 
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.utcnow())
