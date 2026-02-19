@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pykrige
+pandas
+numpy
+requests
+joblib
+scipy
