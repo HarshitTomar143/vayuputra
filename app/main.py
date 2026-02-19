@@ -8,6 +8,8 @@ from app.services.fetch_service import fetch_and_store_stations
 from app.schemas import LocationRequest, AQIResponse
 from app.services.spatial_services import predict_pollution
 
+from app.schemas import LocationRequest, AQIResponse
+
 app = FastAPI(title="VAYUPUTRA ML API")
 
 # Initialize scheduler
@@ -35,11 +37,10 @@ def shutdown_event():
 
 @app.post("/aqi", response_model=AQIResponse)
 def get_aqi(request: LocationRequest):
+    result = predict_pollution(request.lat, request.lon)
 
-    predicted_value = predict_pollution(request.lat, request.lon)
-
-    return AQIResponse(
-        latitude=request.lat,
-        longitude=request.lon,
-        predicted_pm25=predicted_value
-    )
+    return {
+        "latitude": request.lat,
+        "longitude": request.lon,
+        **result
+    }
