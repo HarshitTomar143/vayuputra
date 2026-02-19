@@ -44,3 +44,7 @@ def get_aqi(request: LocationRequest):
         "longitude": request.lon,
         **result
     }
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}

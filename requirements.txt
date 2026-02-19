@@ -6,3 +6,7 @@ numpy
 requests
 joblib
 scipy
+sqlalchemy
+psycopg2-binary
+apscheduler
+python-dotenv
