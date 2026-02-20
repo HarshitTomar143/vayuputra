@@ -1,11 +1,13 @@
 import math
 import pandas as pd
 from app.db import SessionLocal
+
 from app.models.station import Station
 
 
+# Haversine distance
 def haversine(lat1, lon1, lat2, lon2):
-    R = 6371
+    R = 6371  # km
     phi1 = math.radians(lat1)
     phi2 = math.radians(lat2)
 
@@ -61,7 +63,7 @@ def get_latest_station_snapshot():
     return df
 
 
-def predict_pollution(lat: float, lon: float):
+def get_nearest_station_data(lat: float, lon: float):
     df = get_latest_station_snapshot()
 
     if df.empty:
@@ -72,6 +74,32 @@ def predict_pollution(lat: float, lon: float):
         axis=1
     )
 
+    nearest = df.sort_values("distance").iloc[0]
+
+    return {
+        "nearest_station": nearest["name"],
+        "aqi": nearest["aqi"],
+        "pm25": nearest["pm25"],
+        "pm10": nearest["pm10"],
+        "co": nearest["co"],
+        "no2": nearest["no2"],
+        "o3": nearest["o3"],
+        "humidity": nearest["humidity"]
+    }
+
+def get_weighted_aqi(lat: float, lon: float):
+    df = get_latest_station_snapshot()
+
+    if df.empty:
+        return None
+
+    # Calculate distance
+    df["distance"] = df.apply(
+        lambda row: haversine(lat, lon, row["latitude"], row["longitude"]),
+        axis=1
+    )
+
+    # Get 3 nearest stations
     nearest = df.sort_values("distance").head(3)
 
     weights = []
@@ -79,9 +107,10 @@ def predict_pollution(lat: float, lon: float):
 
     for _, row in nearest.iterrows():
 
+        # If exact station location
         if row["distance"] == 0:
             return {
-                "predicted_aqi": float(row["aqi"]),
+                "predicted_aqi": row["aqi"],
                 "nearest_station": row["name"],
                 "pm25": row["pm25"],
                 "pm10": row["pm10"],
@@ -95,17 +124,18 @@ def predict_pollution(lat: float, lon: float):
         weights.append(weight)
         weighted_values.append(weight * row["aqi"])
 
-    predicted = sum(weighted_values) / sum(weights)
+    predicted_aqi = sum(weighted_values) / sum(weights)
 
-    nearest_station = nearest.iloc[0]
+    # Use closest station for other pollutants
+    closest_station = nearest.iloc[0]
 
     return {
-        "predicted_aqi": round(float(predicted), 2),
-        "nearest_station": nearest_station["name"],
-        "pm25": nearest_station["pm25"],
-        "pm10": nearest_station["pm10"],
-        "co": nearest_station["co"],
-        "no2": nearest_station["no2"],
-        "o3": nearest_station["o3"],
-        "humidity": nearest_station["humidity"]
+        "predicted_aqi": round(float(predicted_aqi), 2),
+        "nearest_station": closest_station["name"],
+        "pm25": closest_station["pm25"],
+        "pm10": closest_station["pm10"],
+        "co": closest_station["co"],
+        "no2": closest_station["no2"],
+        "o3": closest_station["o3"],
+        "humidity": closest_station["humidity"]
     }

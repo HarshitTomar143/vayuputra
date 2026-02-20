@@ -6,11 +6,14 @@ from app.models.station import Base
 from app.services.fetch_service import fetch_and_store_stations
 
 from app.schemas import LocationRequest, AQIResponse
-from app.services.spatial_services import predict_pollution
+
+from app.services.spatial_services import get_weighted_aqi
 
 from app.schemas import LocationRequest, AQIResponse
 
 app = FastAPI(title="VAYUPUTRA ML API")
+
+from app.services.spatial_services import get_nearest_station_data
 
 # Initialize scheduler
 scheduler = BackgroundScheduler()
@@ -35,9 +38,25 @@ def shutdown_event():
     scheduler.shutdown()
 
 
-@app.post("/aqi", response_model=AQIResponse)
-def get_aqi(request: LocationRequest):
-    result = predict_pollution(request.lat, request.lon)
+@app.post("/aqii")
+def get_aqi(request: LocationRequest) :
+    result = get_nearest_station_data(request.lat, request.lon)
+
+    if not result:
+        return {"error": "No station data available"}
+
+    return {
+        "latitude": request.lat,
+        "longitude": request.lon,
+        **result
+    }
+
+@app.post("/aqi")
+def get_aqi(request: LocationRequest) :
+    result = get_weighted_aqi(request.lat, request.lon)
+
+    if not result:
+        return {"error": "No station data available"}
 
     return {
         "latitude": request.lat,
